@@ -326,7 +326,7 @@ open htmlcov/index.html
 
 ## 👤 Author
 
-**Your Name**
+**Lekhana Sandra**
 - Course: Python for Web API Development
 - Institution: NJIT
 - Semester: Fall 2025
