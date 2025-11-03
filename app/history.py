@@ -21,6 +21,9 @@ class CalculationHistory:
         self._history: List[Calculation] = []
         self._max_size = max_size
         self._caretaker = HistoryCaretaker()
+        
+        # Save initial empty state
+        self._caretaker.save_state(CalculatorMemento(self._history))
     
     def add_calculation(self, calculation: Calculation):
         """
@@ -29,14 +32,14 @@ class CalculationHistory:
         Args:
             calculation: Calculation to add
         """
-        # Save current state before adding new calculation
-        self._caretaker.save_state(CalculatorMemento(self._history))
-        
         self._history.append(calculation)
         
         # Enforce max size
         if len(self._history) > self._max_size:
             self._history.pop(0)
+        
+        # Save state after adding
+        self._caretaker.save_state(CalculatorMemento(self._history))
     
     def get_history(self) -> List[Calculation]:
         """Return copy of calculation history."""
@@ -46,6 +49,8 @@ class CalculationHistory:
         """Clear all calculation history and undo/redo stacks."""
         self._history.clear()
         self._caretaker.clear()
+        # Save empty state
+        self._caretaker.save_state(CalculatorMemento(self._history))
     
     def get_last_calculation(self) -> Optional[Calculation]:
         """Return the most recent calculation."""
@@ -58,6 +63,9 @@ class CalculationHistory:
         Returns:
             True if undo was successful, False otherwise
         """
+        if not self.can_undo():
+            return False
+        
         memento = self._caretaker.undo()
         if memento is None:
             return False
@@ -72,6 +80,9 @@ class CalculationHistory:
         Returns:
             True if redo was successful, False otherwise
         """
+        if not self.can_redo():
+            return False
+        
         memento = self._caretaker.redo()
         if memento is None:
             return False
@@ -135,6 +146,8 @@ class CalculationHistory:
             
             # Clear undo/redo stacks after loading
             self._caretaker.clear()
+            # Save loaded state
+            self._caretaker.save_state(CalculatorMemento(self._history))
         except Exception as e:
             raise HistoryError(f"Failed to load history: {str(e)}")
     

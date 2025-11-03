@@ -14,11 +14,11 @@ class CalculatorMemento:
         Args:
             history: List of calculations to save
         """
-        self._history = history.copy()
+        self._history = [calc for calc in history]  # Deep copy
     
     def get_state(self) -> List[Calculation]:
         """Return the saved history state."""
-        return self._history.copy()
+        return [calc for calc in self._history]  # Return copy
 
 
 class HistoryCaretaker:
@@ -26,61 +26,58 @@ class HistoryCaretaker:
     
     def __init__(self):
         """Initialize the caretaker with empty undo/redo stacks."""
-        self._undo_stack: List[CalculatorMemento] = []
-        self._redo_stack: List[CalculatorMemento] = []
+        self._states: List[CalculatorMemento] = []
+        self._current_index: int = -1
     
     def save_state(self, memento: CalculatorMemento):
         """
-        Save a new state and clear redo stack.
+        Save a new state and clear any future states.
         
         Args:
             memento: Memento to save
         """
-        self._undo_stack.append(memento)
-        self._redo_stack.clear()  # Clear redo stack when new action performed
+        # Remove any states after current index (for redo clear)
+        self._states = self._states[:self._current_index + 1]
+        
+        # Add new state
+        self._states.append(memento)
+        self._current_index = len(self._states) - 1
     
     def undo(self) -> Optional[CalculatorMemento]:
         """
-        Undo the last operation.
+        Undo to previous state.
         
         Returns:
-            Previous memento state, or None if nothing to undo
+            Previous memento state, or None if can't undo
         """
-        if len(self._undo_stack) < 2:  # Need at least 2 states to undo
+        if not self.can_undo():
             return None
         
-        # Move current state to redo stack
-        current_state = self._undo_stack.pop()
-        self._redo_stack.append(current_state)
-        
-        # Return previous state
-        return self._undo_stack[-1] if self._undo_stack else None
+        self._current_index -= 1
+        return self._states[self._current_index]
     
     def redo(self) -> Optional[CalculatorMemento]:
         """
-        Redo the last undone operation.
+        Redo to next state.
         
         Returns:
-            Next memento state, or None if nothing to redo
+            Next memento state, or None if can't redo
         """
-        if not self._redo_stack:
+        if not self.can_redo():
             return None
         
-        # Move state back to undo stack
-        next_state = self._redo_stack.pop()
-        self._undo_stack.append(next_state)
-        
-        return next_state
+        self._current_index += 1
+        return self._states[self._current_index]
     
     def can_undo(self) -> bool:
         """Check if undo is possible."""
-        return len(self._undo_stack) > 1
+        return self._current_index > 0
     
     def can_redo(self) -> bool:
         """Check if redo is possible."""
-        return len(self._redo_stack) > 0
+        return self._current_index < len(self._states) - 1
     
     def clear(self):
         """Clear all undo/redo history."""
-        self._undo_stack.clear()
-        self._redo_stack.clear()
+        self._states.clear()
+        self._current_index = -1

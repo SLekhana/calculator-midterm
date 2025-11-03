@@ -48,16 +48,20 @@ def test_caretaker_undo():
     """Test caretaker undo functionality."""
     caretaker = HistoryCaretaker()
     
-    # Save initial state
-    history1 = [Calculation('add', 1, 2, 3)]
+    # Save initial state (empty)
+    history1 = []
     caretaker.save_state(CalculatorMemento(history1))
     
     # Save second state
-    history2 = [
+    history2 = [Calculation('add', 1, 2, 3)]
+    caretaker.save_state(CalculatorMemento(history2))
+    
+    # Save third state
+    history3 = [
         Calculation('add', 1, 2, 3),
         Calculation('multiply', 4, 5, 20)
     ]
-    caretaker.save_state(CalculatorMemento(history2))
+    caretaker.save_state(CalculatorMemento(history3))
     
     # Now we can undo
     assert caretaker.can_undo() is True
@@ -71,7 +75,8 @@ def test_caretaker_redo():
     """Test caretaker redo functionality."""
     caretaker = HistoryCaretaker()
     
-    # Save two states
+    # Save states
+    caretaker.save_state(CalculatorMemento([]))
     caretaker.save_state(CalculatorMemento([Calculation('add', 1, 2, 3)]))
     caretaker.save_state(CalculatorMemento([
         Calculation('add', 1, 2, 3),
@@ -89,11 +94,12 @@ def test_caretaker_redo():
     assert len(restored) == 2
 
 
-def test_caretaker_undo_clears_redo():
+def test_caretaker_save_clears_redo():
     """Test that new state clears redo stack."""
     caretaker = HistoryCaretaker()
     
     # Save states and undo
+    caretaker.save_state(CalculatorMemento([]))
     caretaker.save_state(CalculatorMemento([Calculation('add', 1, 2, 3)]))
     caretaker.save_state(CalculatorMemento([
         Calculation('add', 1, 2, 3),
@@ -119,6 +125,13 @@ def test_caretaker_cannot_undo_empty():
     assert caretaker.undo() is None
 
 
+def test_caretaker_cannot_undo_single_state():
+    """Test cannot undo with only one state."""
+    caretaker = HistoryCaretaker()
+    caretaker.save_state(CalculatorMemento([]))
+    assert caretaker.can_undo() is False
+
+
 def test_caretaker_cannot_redo_empty():
     """Test cannot redo with empty redo stack."""
     caretaker = HistoryCaretaker()
@@ -130,6 +143,7 @@ def test_caretaker_clear():
     """Test clearing caretaker stacks."""
     caretaker = HistoryCaretaker()
     
+    caretaker.save_state(CalculatorMemento([]))
     caretaker.save_state(CalculatorMemento([Calculation('add', 1, 2, 3)]))
     caretaker.save_state(CalculatorMemento([
         Calculation('add', 1, 2, 3),
@@ -140,3 +154,52 @@ def test_caretaker_clear():
     
     assert caretaker.can_undo() is False
     assert caretaker.can_redo() is False
+
+
+def test_caretaker_multiple_undos():
+    """Test multiple undo operations."""
+    caretaker = HistoryCaretaker()
+    
+    # Save multiple states
+    caretaker.save_state(CalculatorMemento([]))
+    caretaker.save_state(CalculatorMemento([Calculation('add', 1, 2, 3)]))
+    caretaker.save_state(CalculatorMemento([
+        Calculation('add', 1, 2, 3),
+        Calculation('multiply', 4, 5, 20)
+    ]))
+    caretaker.save_state(CalculatorMemento([
+        Calculation('add', 1, 2, 3),
+        Calculation('multiply', 4, 5, 20),
+        Calculation('divide', 10, 2, 5)
+    ]))
+    
+    # Undo twice
+    memento1 = caretaker.undo()
+    assert len(memento1.get_state()) == 2
+    
+    memento2 = caretaker.undo()
+    assert len(memento2.get_state()) == 1
+
+
+def test_caretaker_multiple_redos():
+    """Test multiple redo operations."""
+    caretaker = HistoryCaretaker()
+    
+    # Save multiple states
+    caretaker.save_state(CalculatorMemento([]))
+    caretaker.save_state(CalculatorMemento([Calculation('add', 1, 2, 3)]))
+    caretaker.save_state(CalculatorMemento([
+        Calculation('add', 1, 2, 3),
+        Calculation('multiply', 4, 5, 20)
+    ]))
+    
+    # Undo twice
+    caretaker.undo()
+    caretaker.undo()
+    
+    # Redo twice
+    memento1 = caretaker.redo()
+    assert len(memento1.get_state()) == 1
+    
+    memento2 = caretaker.redo()
+    assert len(memento2.get_state()) == 2
